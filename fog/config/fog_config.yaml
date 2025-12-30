@@ -1,0 +1,26 @@
+fog:
+  # =========================
+  # Windowing configuration
+  # =========================
+  window:
+    duration_seconds: 4.0
+    overlap_seconds: 0.0
+
+  # =========================
+  # Signal configuration
+  # =========================
+  signal:
+    expected_sampling_rate: null   # null = usar el del EDF
+
+  # =========================
+  # Execution mode
+  # =========================
+  simulation:
+    realtime: true                 # si true, respeta el tiempo real
+    artificial_delay_seconds: 0.0  # delay extra para pruebas
+
+  # =========================
+  # Paths
+  # =========================
+  paths:
+    local_output_dir: fog/output/

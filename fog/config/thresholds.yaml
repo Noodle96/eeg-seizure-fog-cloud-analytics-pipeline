@@ -1,0 +1,2 @@
+inference:
+  suspicious_threshold: 0.75
