@@ -1,3 +1,5 @@
 venv/
 venv_fog/
 venv_cloud/
+
+__pycache__/

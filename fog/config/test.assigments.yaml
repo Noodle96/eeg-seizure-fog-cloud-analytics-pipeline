@@ -1,0 +1,18 @@
+rooms:
+  room_A:
+    patients:
+      - patient_id: aaaaabjo
+        edf_path: fog/data/patients/patient_aaaaabjo/aaaaabjo_s002_t001.edf
+
+      - patient_id: aaaaadsz
+        edf_path: fog/data/patients/patient_aaaaadsz/aaaaadsz_s002_t002.edf
+
+  room_B:
+    patients:
+      - patient_id: aaaaakmw
+        edf_path: fog/data/patients/patient_aaaaakmw/aaaaakmw_s003_t001.edf
+        
+      - patient_id: aaaaaead
+        edf_path: fog/data/patients/patient_aaaaaead/aaaaaead_s001_t001.edf
+
+      

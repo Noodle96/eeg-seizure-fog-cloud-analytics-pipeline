@@ -52,15 +52,18 @@ def run_inference(
     # --------------------------------------------------
 
     # Energy-based heuristic (very rough)
-    energy: float = float(np.mean(window ** 2))
+    # energy: float = float(np.mean(window ** 2)) # C1
 
     # Normalize energy to a pseudo-probability
     # (these constants are arbitrary for simulation)
-    normalized_energy: float = min(energy / 100.0, 1.0)
+    # normalized_energy: float = min(energy / 100.0, 1.0) # C2
 
     # Add controlled randomness
-    noise: float = float(np.random.uniform(0.0, 0.1))
+    # noise: float = float(np.random.uniform(0.0, 0.1)) # C3
+    # score: float = min(max(normalized_energy + noise, 0.0), 1.0) # C4
 
-    score: float = min(max(normalized_energy + noise, 0.0), 1.0)
+
+    # generación de un numero aleatorio entre 0 y 1
+    score = float(np.random.uniform(0.0, 1.0))
 
     return score

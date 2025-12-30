@@ -21,12 +21,13 @@ from datetime import datetime
 from typing import Dict, Any
 
 
-def build_suspected_window_event(
+def build_window_event(
     room_id: str,
     patient_id: str,
     session_id: str,
     window_index: int,
     score: float,
+    suspected: bool,
 ) -> Dict[str, Any]:
     """
     Build an event for a suspected EEG window.
@@ -51,8 +52,8 @@ def build_suspected_window_event(
     """
 
     event: Dict[str, Any] = {
-        "event_version": "1.0",
-        "event_type": "SUSPECTED_EEG_WINDOW",
+        "event_type": "eeg_window",
+        "suspected": suspected,
         "timestamp_utc": datetime.utcnow().isoformat(),
 
         # Context
@@ -63,6 +64,8 @@ def build_suspected_window_event(
         # Window-level info
         "window_index": window_index,
         "score": float(score),
+
+        "partition_key": patient_id,
     }
 
     return event

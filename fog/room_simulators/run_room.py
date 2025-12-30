@@ -31,17 +31,21 @@ import yaml
 # =========================
 # Pipeline imports
 # =========================
-from pipeline.ingestion import load_edf_signal
-from pipeline.windowing import generate_windows
-from pipeline.inference import run_inference
-from pipeline.thresholds import is_suspected
-from pipeline.local_alerts import trigger_local_alert
-from pipeline.session_manager import (
+from fog.pipeline.ingestion import load_edf_signal
+from fog.pipeline.windowing import generate_windows
+from fog.pipeline.inference import run_inference
+from fog.pipeline.thresholds import is_suspected
+from fog.pipeline.local_alerts import trigger_local_alert
+from fog.pipeline.session_manager import (
     start_session,
     end_session,
+    register_window,
+    register_suspicious_window,
+    should_upload_edf,
 )
-from pipeline.event_builder import build_suspected_window_event
-
+from fog.pipeline.event_builder import build_window_event
+from fog.pipeline.edf_uploader import upload_edf
+from fog.pipeline.cloud_publisher import publish_event
 
 # =========================
 # Types
@@ -81,11 +85,27 @@ def load_room_assignments(config_path: Path) -> RoomConfig:
     return config
 
 
+def load_session_policy(config_path: Path) -> Dict[str, Any]:
+    """
+    Load session policy configuration from YAML.
+    """
+    if not config_path.exists():
+        raise FileNotFoundError(f"Session policy file not found: {config_path}")
+
+    with config_path.open("r", encoding="utf-8") as f:
+        policy: Dict[str, Any] = yaml.safe_load(f)
+
+    if "session" not in policy or "min_suspicious_windows" not in policy["session"]:
+        raise ValueError("Invalid session_policy.yaml structure")
+
+    return policy
+
+
 # =========================
 # Room simulation
 # =========================
-
-def run_room(room_id: str, config: RoomConfig) -> None:
+# MIN_SUSPICIOUS_WINDOWS: int = 5  # luego vendrá de YAML
+def run_room(room_id: str, config: RoomConfig, session_policy: Dict[str, Any],) -> None:
     """
     Simulate a single room in the Fog node.
 
@@ -126,6 +146,8 @@ def run_room(room_id: str, config: RoomConfig) -> None:
         # Load EEG signal from EDF
         # -------------------------
         signal, sfreq = load_edf_signal(edf_path)
+        print(f"[INFO] EDF signal loaded (sfreq={sfreq} Hz)")
+        print(f"[INFO] Signal shape: {signal.shape}")
 
         # -------------------------
         # Generate and process windows
@@ -133,11 +155,21 @@ def run_room(room_id: str, config: RoomConfig) -> None:
         for window_index, window_data in enumerate(
             generate_windows(signal, sfreq)
         ):
+            # print("window_index:", window_index)
+            # print("window_data.shape:", window_data.shape)
+            print(f"\n\t[INFO] Processing window {window_index} of shape {window_data.shape}")
+            # 1️⃣ Registrar ventana procesada
+            register_window(session_id)
+
             # Run inference (mock model)
             probability: float = run_inference(window_data)
+            print(f"\t[INFO] Inference probability: {probability:.4f}")
 
             # Decision logic
             if is_suspected(probability):
+                # 1️⃣ Registrar ventana sospechosa
+                register_suspicious_window(session_id)
+
                 trigger_local_alert(
                     room_id=room_id,
                     patient_id=patient_id,
@@ -146,16 +178,16 @@ def run_room(room_id: str, config: RoomConfig) -> None:
                     score=probability,
                 )
 
-                # 2) Construir evento estructurado
-                event: dict = build_suspected_window_event(
-                    room_id=room_id,
-                    patient_id=patient_id,
-                    session_id=session_id,
-                    window_index=window_index,
-                    score=probability,
-                )
-                # 3) Por ahora solo lo mostramos (luego va a cloud)
-                print("[EVENT BUILT]", event)
+            # 2) Construir evento estructurado
+            event: dict = build_window_event(
+                room_id=room_id,
+                patient_id=patient_id,
+                session_id=session_id,
+                window_index=window_index,
+                score=probability,
+                suspected=is_suspected(probability),
+            )
+            publish_event(event)
 
         # -------------------------
         # End session
@@ -165,7 +197,24 @@ def run_room(room_id: str, config: RoomConfig) -> None:
             patient_id=patient_id,
             session_id=session_id,
         )
-
+        min_suspicious_windows: int = int(
+            session_policy["session"]["min_suspicious_windows"]
+        )
+        if should_upload_edf(session_id, min_suspicious_windows):
+            print(
+                f"[INFO] Session {session_id} qualifies for EDF upload "
+                f"(>= {min_suspicious_windows} suspicious windows)"
+            )
+            # upload_edf(edf_path)
+            upload_edf(
+                edf_path=edf_path,
+                patient_id=patient_id,
+                session_id=session_id,
+            )
+        else:
+            print(
+                f"[INFO] Session {session_id} does NOT qualify for EDF upload"
+            )
         print(f"[INFO] Session finished for patient {patient_id}")
 
     print(f"\n[INFO] Simulation finished for room: {room_id}")
@@ -213,7 +262,14 @@ def main() -> None:
 
     try:
         config: RoomConfig = load_room_assignments(args.config)
-        run_room(args.room, config)
+        session_policy: Dict[str, Any] = load_session_policy(
+            Path("fog/config/session_policy.yaml")
+        )
+        run_room(
+            room_id=args.room,
+            config=config,
+            session_policy=session_policy,
+        )
     except Exception as exc:
         print(f"[ERROR] {exc}", file=sys.stderr)
         sys.exit(1)

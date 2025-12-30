@@ -4,3 +4,4 @@ mne
 pyyaml
 matplotlib
 pyEDFlib
+boto3

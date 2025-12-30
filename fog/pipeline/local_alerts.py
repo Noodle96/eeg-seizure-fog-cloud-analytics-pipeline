@@ -47,14 +47,15 @@ def trigger_local_alert(
 
     timestamp: str = datetime.utcnow().isoformat()
 
-    print(
-        "\n"
-        "================= LOCAL ALERT =================\n"
-        f" Time (UTC)   : {timestamp}\n"
-        f" Room         : {room_id}\n"
-        f" Patient      : {patient_id}\n"
-        f" Session      : {session_id}\n"
-        f" Window index : {window_index}\n"
-        f" Score        : {score:.4f}\n"
-        "================================================\n"
-    )
+    # print(
+    #     "\n"
+    #     "================= LOCAL ALERT =================\n"
+    #     f" Time (UTC)   : {timestamp}\n"
+    #     f" Room         : {room_id}\n"
+    #     f" Patient      : {patient_id}\n"
+    #     f" Session      : {session_id}\n"
+    #     f" Window index : {window_index}\n"
+    #     f" Score        : {score:.4f}\n"
+    #     "================================================\n"
+    # )
+    print("\t\t[ALERT - LOCAL GENERATED]")
