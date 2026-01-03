@@ -206,7 +206,7 @@ def run_room(room_id: str, config: RoomConfig, session_policy: Dict[str, Any],) 
                 f"(>= {min_suspicious_windows} suspicious windows)"
             )
             # upload_edf(edf_path)
-            upload_edf(
+            upload_edf( 
                 edf_path=edf_path,
                 patient_id=patient_id,
                 session_id=session_id,

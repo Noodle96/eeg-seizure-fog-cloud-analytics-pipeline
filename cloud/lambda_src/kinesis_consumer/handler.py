@@ -38,7 +38,8 @@ def decode_kinesis_record(record: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def store_event_in_s3(event: Dict[str, Any]) -> None:
-    print("BEGIN store_event_in_s3")
+    print("[BEGIN S3] store_event_in_s3")
+    # print("event:", event)
     """
     Append EEG event to S3 as JSONL.
     """
@@ -56,21 +57,23 @@ def store_event_in_s3(event: Dict[str, Any]) -> None:
         Key=key,
         Body=json.dumps(event) + "\n",
     )
-    print(f"[INFO] Stored event in S3: s3://{RAW_EVENTS_BUCKET}/{key}")
+    print(f"[END S3] Stored event in S3: s3://{RAW_EVENTS_BUCKET}/{key}")
 
 
 def update_dynamodb(event: Dict[str, Any]) -> None:
-    print("BEGIN update_dynamodb")
+    print("[BEGIN DYNAMODB] update_dynamodb")
+    # print("event:", event)
+
     """
     Update aggregated counters in DynamoDB.
     """
-    print(
-        "[DEBUG] Dynamo Key:",
-        {
-            "pk": event["patient_id"],
-            "sk": event["session_id"],
-        },
-    )
+    # print(
+    #     "[DEBUG] Dynamo Key:",
+    #     {
+    #         "pk": event["patient_id"],
+    #         "sk": event["session_id"],
+    #     },
+    # )
     table.update_item(
         Key={
             "pk": event["patient_id"],
@@ -85,7 +88,7 @@ def update_dynamodb(event: Dict[str, Any]) -> None:
             ":sus": 1 if event["suspected"] else 0,
         },
     )
-    print(f"[INFO] Updated DynamoDB for patient {event['patient_id']}, session {event['session_id']}")
+    print(f"[END DYNAMODB] Updated DynamoDB for patient {event['patient_id']}, session {event['session_id']}")
 
 
 # ============================================================
@@ -99,14 +102,19 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     records: List[Dict[str, Any]] = event.get("Records", [])
 
     print(f"[INFO] Received {len(records)} records from Kinesis")
+    print(f"[INFO] records: {records}")
     # print(f"[DEBUG VARIABLES] RAW_EVENTS_BUCKET={RAW_EVENTS_BUCKET}, DYNAMO_TABLE_NAME={DYNAMO_TABLE_NAME}")
 
+    idx: int = 0
     for record in records:
+        print("record index:", idx)
+        idx+=1
         eeg_event: Dict[str, Any] = decode_kinesis_record(record)
-
+        # print("eeg_event puro: ", eeg_event)
+        print(f"[DEBUG] Decoded EEG event: {json.dumps(eeg_event)}")
         store_event_in_s3(eeg_event)
         update_dynamodb(eeg_event)
-
+    print("end handler")
     return {
         "statusCode": 200,
         "processed_records": len(records),
